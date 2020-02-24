@@ -1,4 +1,4 @@
-package com.example.lib
+package original
 
 import java.io.FileInputStream
 import java.io.FileOutputStream
@@ -126,7 +126,12 @@ fun main(args: Array<String>) {
                 nextLibraryToSign.nDays--
                 if (nextLibraryToSign.nDays <= 0) {
                     signedLibraries.add(nextLibraryToSign)
-                    Output.signedLibraries.add(OutputLibrary(nextLibraryToSign.id, arrayListOf()))
+                    Output.signedLibraries.add(
+                        OutputLibrary(
+                            nextLibraryToSign.id,
+                            arrayListOf()
+                        )
+                    )
                     nextLibraryToSign = null
                 }
             }
