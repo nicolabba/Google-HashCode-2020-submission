@@ -1,8 +1,5 @@
 package improved
 
-import kotlinx.coroutines.async
-import kotlinx.coroutines.awaitAll
-import kotlinx.coroutines.runBlocking
 import java.io.FileInputStream
 import java.io.FileOutputStream
 import java.nio.charset.Charset
@@ -110,16 +107,12 @@ fun main() {
                         )
                     )
                     notSignedLibraries.remove(signingLibrary)
-                    runBlocking {
-                        notSignedLibraries.map {
-                            async {
+                        notSignedLibraries.forEach {
                                 if (it.books.isNotEmpty())
                                     it.books.removeAll(signingLibrary.readableBooks)
                                 else
                                     arrayListOf<Book>()
                             }
-                        }.awaitAll()
-                    }
                 }
                 currDay += signingLibrary.nDays
             }
