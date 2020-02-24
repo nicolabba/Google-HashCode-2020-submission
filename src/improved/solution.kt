@@ -10,7 +10,7 @@ import kotlin.math.pow
 
 const val DECLINE_RATE = 1.025
 
-class OutputLibrary(val id: Int, val books: ArrayList<Int>) {
+class OutputLibrary(private val id: Int, private val books: ArrayList<Int>) {
     override fun toString(): String {
         return id.toString() + " " + books.size + "\n" + books.joinToString(" ")
     }
@@ -37,7 +37,7 @@ data class Library(val id: Int, var nBooks: Int, var nDays: Int, var nBooksPerDa
     }
     fun updateReadableBooksAndGetScore(remainingDays: Int): Double {
         val maxNumberOfReadableBooks: Long = (remainingDays.toLong() - nDays.toLong()) * nBooksPerDay.toLong()
-        return if (remainingDays > nDays) {
+        return if (remainingDays > nDays && books.size > 0) {
             readableBooks = if (maxNumberOfReadableBooks < books.size)
                 books.subList(0, (maxNumberOfReadableBooks - 1).toInt())
             else books
@@ -62,10 +62,10 @@ fun writeFile(data: String, fileName: String) {
 }
 
 fun fileLetters(): List<String> {
-    return listOf("a","b","c",/*"d",*/"e","f")
+    return listOf("a","b","c","d","e","f")
 }
 
-fun main(args: Array<String>) {
+fun main() {
     fileLetters().forEach { fileLetter ->
         val fileRows = readFile("$fileLetter.txt")
         val nDays = fileRows[0].split(' ')[2].toInt()
@@ -94,29 +94,39 @@ fun main(args: Array<String>) {
             }
         }
 
-        val signedLibraries = arrayListOf<Library>()
+        // val signedLibraries = arrayListOf<Library>()
         var currDay = 0
+        var time = System.nanoTime()
         while (currDay < nDays && notSignedLibraries.isNotEmpty()) {
             notSignedLibraries.maxBy {
-                it.updateReadableBooksAndGetScore(nDays)
+                it.updateReadableBooksAndGetScore(nDays - currDay)
             }?.let { signingLibrary ->
-                signedLibraries.add(signingLibrary)
-                notSignedLibraries.remove(signingLibrary)
-                runBlocking {
-                    notSignedLibraries.map {
-                        async {
-                            if (it.books.isNotEmpty())
-                                it.books.removeAll(signingLibrary.readableBooks)
-                            else
-                                arrayListOf<Book>()
-                        }
-                    }.awaitAll()
+                // signedLibraries.add(signingLibrary)
+                if (signingLibrary.readableBooks.size > 0) {
+                    Output.signedLibraries.add(
+                        OutputLibrary(
+                            signingLibrary.id,
+                            ArrayList(signingLibrary.readableBooks.map { it.id })
+                        )
+                    )
+                    notSignedLibraries.remove(signingLibrary)
+                    runBlocking {
+                        notSignedLibraries.map {
+                            async {
+                                if (it.books.isNotEmpty())
+                                    it.books.removeAll(signingLibrary.readableBooks)
+                                else
+                                    arrayListOf<Book>()
+                            }
+                        }.awaitAll()
+                    }
                 }
-                Output.signedLibraries.add(OutputLibrary(signingLibrary.id, ArrayList(signingLibrary.readableBooks.map { it.id })))
                 currDay += signingLibrary.nDays
             }
-            if (signedLibraries.size % 15 == 0)
-                println(fileLetter + ": " + signedLibraries.size)
+            if (Output.signedLibraries.size % 15 == 0) {
+                print(fileLetter + ": " + Output.signedLibraries.size)
+                System.nanoTime().apply { println("    %.3fs".format(((this - time) / 1000000000.0))) }.also { time = it }
+            }
         }
         writeFile(
             Output.toString(),
